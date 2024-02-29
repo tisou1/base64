@@ -5,10 +5,10 @@
   "main": "index.ts",
   "type": "module",
   "scripts": {
-    "test": "bun index.ts",
-    "test:w": "bun --watch  index.ts",
-    "dev": "tsx index.ts",
-    "dev:w": "tsx watch index.ts"
+    "test": "vitest run",
+    "test:w": "vitest --watch --update ",
+    "dev": "bun index.ts",
+    "dev:w": "bun --watch index.ts"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +16,7 @@
   "devDependencies": {
     "@types/node": "^20.11.21",
     "tsx": "^4.7.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^1.3.1"
   }
 }

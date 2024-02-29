@@ -3,5 +3,8 @@
     "lib": ["ESNext","DOM"],
     "target": "ESNext",
     "strict": false,
+    "baseUrl": "./",
+    "moduleResolution": "node",
+    "types": ["vitest/globals"]
   }
 }

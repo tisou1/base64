@@ -234,3 +234,71 @@ function chunk(array: number[], size: number):number[][] {
 
   return result;
 }
+
+/**
+ * 常量的定义
+ */
+const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".split('')
+// 要填充的字符
+const PADDING_CHAR = '='
+const BITS_PER_BYTE = 8 // 一个字节占8个比特位
+// 一个char要占几个比特位
+const BITS_PER_CHAR = Math.round(Math.log2(BASE64_ALPHABET.length))
+// 最小公倍数
+const BITS_PER_CHUNK = BITS_PER_CHAR
+
+const CHARS_PER_CHUNK = BITS_PER_CHUNK / BITS_PER_CHAR 
+const CHUNK_LENGTH = BITS_PER_CHUNK / BITS_PER_BYTE  
+const ENCODING_MASK = BASE64_ALPHABET.length - 1 
+const DECODING_MASK = 0xff
+
+function toBase64(str: string):string {
+  const digits = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".split("")
+  let base32Result = ''
+
+  // 字符串转为字节数组
+  const bytes = strToByte(str)
+
+  // 拿到字节数组后, 5个一组(要是直接使用lodash的chunk方法,要么手写)
+  const chunks = chunk(Array.from(bytes), 5)
+  // console.log(chunks,'>>>');
+  chunks.forEach((chunk) => {
+
+    // 后续要处理长度不够40位的
+    // RFC 规定，如果最后一组包含少于 40 位，则必须用零填充，直到总位数能被 5 整除。每组 5 个字节应产生 8 个编码字符。
+    // 如果最后一个块产生的字符少于 8 个，我们将用 = 填充剩余空间。
+    // 1. 计算chunk的长度所占的比特位
+    let bitsInChunk = chunk.length * 8
+    // 这次要编码的次数
+    let numOfChara = Math.ceil((bitsInChunk / 5)) // 向上取整 
+    // 要填充的长度
+    let padding = bitsInChunk < 40 ? 5 - bitsInChunk % 5 : 0
+
+    let buf = 0n;
+    chunk.forEach((byte) => {
+      // 使用bigInt, 不然会有精度丢失问题
+      buf = (buf << 8n) + BigInt(byte)
+      // console.log((buf).toString(2), "临时的")
+    })
+    // 如果位数不够需要填充
+    buf <<= BigInt(padding)
+    // 会得到40位的二进制, 然后再5个一组,从digits中取值
+    const result = [];
+    while(buf > 0) {
+      let digit = digits[Number(buf & 31n)]
+      result.push(digit)
+      buf = buf >> 5n
+    }
+
+    let chunkRes = result.reverse().join('')
+    // 填充 (8 - numOfChara)个'='
+    for(let i = 0; i < 8-numOfChara ; i++) {
+      chunkRes += '='
+    }
+
+    console.log(chunkRes,'临时的结果');
+    base32Result += chunkRes
+  })
+  console.log('最终的结果:', base32Result)
+  return base32Result
+}
