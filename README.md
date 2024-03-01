@@ -2,6 +2,8 @@
 
 ### typescript实现node/web下的base64编码
 
+[参考链接](https://ptrchm.com/posts/base32-explained/)
+
 ### 实现思路
 
 像十进制数字使用10位数字表示数字一样, base $2^n$编码表示数字(字节)的另一种方式,n越大表示就越紧凑
