@@ -14,6 +14,8 @@
  * 
  */
 
+import { getLcm, chunk,  strToByte, byteToStr } from './utils'
+
 
 function toBase8(num: number): string {
   const digits = ['0', '1', '2', '3', '4', '5', '6', '7']
@@ -53,8 +55,6 @@ function toBase16(num: number): string {
 
   return toBaseCommon(num, digits, 4);
 }
-
-
 console.log(
   "base16:",
   toBase16(249)
@@ -186,98 +186,50 @@ console.log(
   base32ToStr('MZXW6YTBOI======')
 );
 
-
-function strToByte(str: string): Uint8Array {
-  const encoder = new TextEncoder()
-  return encoder.encode(str)
-}
-
-function byteToStr(bytes: Uint8Array): string {
-  const decoder = new TextDecoder('utf-8');
-  return decoder.decode(bytes);
-}
-
-
-function strToByte2(str: string): Uint8Array {
-  const bytes = new Uint8Array(str.length)
-  for(let i = 0; i < str.length; i++) {
-    bytes[i] = str.charCodeAt(i)
-  }
-  return bytes
-}
-
-// Buffer只能在node环境下使用
-function strToByte3(str: string) {
-  const bytes = Buffer.from(str)
-  return new Uint8Array(bytes)
-}
-// console.log(
-//   strToByte('foobar'),
-//   strToByte2('foobar'),
-//   strToByte3('foobar')
-// );
-
-function chunk(array: number[], size: number):number[][] {
-  // 防御性编程，确保传入的数组是有效的
-  if (!Array.isArray(array) || size <= 0) {
-    throw new Error('Invalid input. Please provide a valid array and a positive chunk size.');
-  }
-
-  const result = [];
-  let index = 0;
-
-  // 遍历数组，每次取出指定大小的元素，构成一个新的数组块
-  while (index < array.length) {
-    result.push(array.slice(index, index + size));
-    index += size;
-  }
-
-  return result;
-}
-
-/**
- * 常量的定义
- */
-const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".split('')
-// 要填充的字符
-const PADDING_CHAR = '='
-const BITS_PER_BYTE = 8 // 一个字节占8个比特位
-// 一个char要占几个比特位
-const BITS_PER_CHAR = Math.round(Math.log2(BASE64_ALPHABET.length))
-// 最小公倍数
-const BITS_PER_CHUNK = BITS_PER_CHAR
-
-const CHARS_PER_CHUNK = BITS_PER_CHUNK / BITS_PER_CHAR 
-const CHUNK_LENGTH = BITS_PER_CHUNK / BITS_PER_BYTE  
-const ENCODING_MASK = BASE64_ALPHABET.length - 1 
-const DECODING_MASK = 0xff
-
 function toBase64(str: string):string {
-  const digits = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".split("")
+
+    /**
+   * 常量的定义
+   */
+  const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".split('')
+  // 要填充的字符
+  const PADDING_CHAR = '='
+  const BITS_PER_BYTE = 8 // 一个字节占8个比特位
+  // 字母表中单个字符的编码位数 6  2**6 = 64
+  const BITS_PER_CHAR = Math.round(Math.log2(BASE64_ALPHABET.length))
+  // 最小公倍数,6 和8的最小公倍数 24（每个字节 8 位，每个字符 6 位）。
+  const BITS_PER_CHUNK = getLcm(BITS_PER_CHAR, BITS_PER_BYTE)
+
+  const CHARS_PER_CHUNK = BITS_PER_CHUNK / BITS_PER_CHAR 
+  const CHUNK_LENGTH = BITS_PER_CHUNK / BITS_PER_BYTE  
+  const ENCODING_MASK = BASE64_ALPHABET.length - 1  // 编码时的掩码
+  const DECODING_MASK = 0xff // 解码时的掩码
+  
+  // const digits = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".split("")
   let base32Result = ''
 
   // 字符串转为字节数组
   const bytes = strToByte(str)
 
   // 拿到字节数组后, 5个一组(要是直接使用lodash的chunk方法,要么手写)
-  const chunks = chunk(Array.from(bytes), 5)
-  // console.log(chunks,'>>>');
+  const chunks = chunk(Array.from(bytes), CHUNK_LENGTH)
   chunks.forEach((chunk) => {
 
     // 后续要处理长度不够40位的
     // RFC 规定，如果最后一组包含少于 40 位，则必须用零填充，直到总位数能被 5 整除。每组 5 个字节应产生 8 个编码字符。
     // 如果最后一个块产生的字符少于 8 个，我们将用 = 填充剩余空间。
     // 1. 计算chunk的长度所占的比特位
-    let bitsInChunk = chunk.length * 8
+    let bitsInChunk = chunk.length * BITS_PER_BYTE
     // 这次要编码的次数
-    let numOfChara = Math.ceil((bitsInChunk / 5)) // 向上取整 
+    let numOfChara = Math.ceil((bitsInChunk * CHARS_PER_CHUNK / BITS_PER_CHUNK )) // 向上取整 
+    // let numOfChara = Math.ceil((bitsInChunk  / BITS_PER_CHAR )) // 向上取整 
     // 要填充的长度
-    let padding = bitsInChunk < 40 ? 5 - bitsInChunk % 5 : 0
+    let padding = bitsInChunk < BITS_PER_CHUNK ? BITS_PER_CHAR - bitsInChunk % BITS_PER_CHAR : 0
 
     let buf = 0n;
     chunk.forEach((byte) => {
       // 使用bigInt, 不然会有精度丢失问题
-      buf = (buf << 8n) + BigInt(byte)
+      buf = (buf << BigInt(BITS_PER_BYTE)) + BigInt(byte)
       // console.log((buf).toString(2), "临时的")
     })
     // 如果位数不够需要填充
@@ -285,15 +237,15 @@ function toBase64(str: string):string {
     // 会得到40位的二进制, 然后再5个一组,从digits中取值
     const result = [];
     while(buf > 0) {
-      let digit = digits[Number(buf & 31n)]
+      let digit = BASE64_ALPHABET[Number(buf & BigInt(ENCODING_MASK))]
       result.push(digit)
-      buf = buf >> 5n
+      buf = buf >> BigInt(BITS_PER_CHAR)
     }
 
     let chunkRes = result.reverse().join('')
     // 填充 (8 - numOfChara)个'='
     for(let i = 0; i < 8-numOfChara ; i++) {
-      chunkRes += '='
+      chunkRes += PADDING_CHAR
     }
 
     console.log(chunkRes,'临时的结果');
@@ -302,3 +254,9 @@ function toBase64(str: string):string {
   console.log('最终的结果:', base32Result)
   return base32Result
 }
+
+
+console.log(
+  "base64测试:",
+  toBase64('foobar')
+);
