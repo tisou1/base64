@@ -175,15 +175,15 @@ function base32ToStr(base32: string): string {
   return base32Str
 }
 
-// console.log(
-//   'base32:',
-//   toBase32('foobar')
-// );
+console.log(
+  'base32:',
+  toBase32('foobar')
+);
 
-// console.log(
-//   '解码base32:',
-//   base32ToStr('MZXW6YTBOI======')
-// );
+console.log(
+  '解码base32:',
+  base32ToStr('MZXW6YTBOI======')
+);
 
 export function toBase64(str: string):string {
 
