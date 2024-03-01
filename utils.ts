@@ -85,3 +85,26 @@ function strToByte3(str: string) {
   return new Uint8Array(bytes)
 }
 
+
+
+/**
+ * 浏览器环境直接调用atob方法
+ * @param base64 
+ * @param encoding 
+ * @returns 
+ */
+export function nodeAtob(base64: string, encoding: BufferEncoding = 'base64') {
+  let buff = Buffer.from(base64, encoding)
+  let str = buff.toString('utf-8')
+  return str
+}
+
+/**
+ * 使用node本身进行字符串的base64编码 浏览器环境直接调用btoa方法
+ * @param str 
+ */
+export function nodeBtoa(str: string) {
+  let buff = Buffer.from(str); // 默认用 utf-8 编码格式解释字符串
+  let base64data = buff.toString('base64');
+  return base64data
+}

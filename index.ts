@@ -80,7 +80,7 @@ function toBase32(str: string):string {
 
   // 拿到字节数组后, 5个一组(要是直接使用lodash的chunk方法,要么手写)
   const chunks = chunk(Array.from(bytes), 5)
-  // console.log(chunks,'>>>');
+
   chunks.forEach((chunk) => {
 
     // 后续要处理长度不够40位的
@@ -115,10 +115,10 @@ function toBase32(str: string):string {
       chunkRes += '='
     }
 
-    console.log(chunkRes,'临时的结果');
+    // console.log(chunkRes,'临时的结果');
     base32Result += chunkRes
   })
-  console.log('最终的结果:', base32Result)
+  // console.log('最终的结果:', base32Result)
   return base32Result
 }
 
@@ -151,7 +151,6 @@ function base32ToStr(base32: string): string {
     byteArrayChunk.forEach(byte => {
       // 向左5位
       buf = (buf << 5n) + BigInt(byte)
-       console.log((buf).toString(2), "临时的")
     })
     // 移除填充的比特位
     buf >>= BigInt(padding)
@@ -176,17 +175,17 @@ function base32ToStr(base32: string): string {
   return base32Str
 }
 
-console.log(
-  'base32:',
-  toBase32('foobar')
-);
+// console.log(
+//   'base32:',
+//   toBase32('foobar')
+// );
 
-console.log(
-  '解码base32:',
-  base32ToStr('MZXW6YTBOI======')
-);
+// console.log(
+//   '解码base32:',
+//   base32ToStr('MZXW6YTBOI======')
+// );
 
-function toBase64(str: string):string {
+export function toBase64(str: string):string {
 
     /**
    * 常量的定义
@@ -200,8 +199,9 @@ function toBase64(str: string):string {
   // 最小公倍数,6 和8的最小公倍数 24（每个字节 8 位，每个字符 6 位）。
   const BITS_PER_CHUNK = getLcm(BITS_PER_CHAR, BITS_PER_BYTE)
 
-  const CHARS_PER_CHUNK = BITS_PER_CHUNK / BITS_PER_CHAR 
-  const CHUNK_LENGTH = BITS_PER_CHUNK / BITS_PER_BYTE  
+  const CHARS_PER_CHUNK = BITS_PER_CHUNK / BITS_PER_CHAR // 4
+  // chunk每组的个数
+  const CHUNK_LENGTH = BITS_PER_CHUNK / BITS_PER_BYTE   // 3
   const ENCODING_MASK = BASE64_ALPHABET.length - 1  // 编码时的掩码
   const DECODING_MASK = 0xff // 解码时的掩码
   
@@ -211,7 +211,7 @@ function toBase64(str: string):string {
   // 字符串转为字节数组
   const bytes = strToByte(str)
 
-  // 拿到字节数组后, 5个一组(要是直接使用lodash的chunk方法,要么手写)
+  // 拿到字节数组后, 4个一组(要是直接使用lodash的chunk方法,要么手写) 
   const chunks = chunk(Array.from(bytes), CHUNK_LENGTH)
   chunks.forEach((chunk) => {
 
@@ -219,7 +219,7 @@ function toBase64(str: string):string {
     // RFC 规定，如果最后一组包含少于 40 位，则必须用零填充，直到总位数能被 5 整除。每组 5 个字节应产生 8 个编码字符。
     // 如果最后一个块产生的字符少于 8 个，我们将用 = 填充剩余空间。
     // 1. 计算chunk的长度所占的比特位
-    let bitsInChunk = chunk.length * BITS_PER_BYTE
+    let bitsInChunk = chunk.length * BITS_PER_BYTE // 24  编码4次
     // 这次要编码的次数
     let numOfChara = Math.ceil((bitsInChunk * CHARS_PER_CHUNK / BITS_PER_CHUNK )) // 向上取整 
     // let numOfChara = Math.ceil((bitsInChunk  / BITS_PER_CHAR )) // 向上取整 
@@ -244,19 +244,91 @@ function toBase64(str: string):string {
 
     let chunkRes = result.reverse().join('')
     // 填充 (8 - numOfChara)个'='
-    for(let i = 0; i < 8-numOfChara ; i++) {
+    for(let i = 0; i < CHARS_PER_CHUNK-numOfChara ; i++) {
       chunkRes += PADDING_CHAR
     }
 
-    console.log(chunkRes,'临时的结果');
+    // console.log(chunkRes,'临时的结果');
     base32Result += chunkRes
   })
-  console.log('最终的结果:', base32Result)
+  // console.log('最终的结果:', base32Result)
   return base32Result
 }
 
 
+
 console.log(
   "base64测试:",
-  toBase64('foobar')
+  toBase64('foobarr')
+);
+
+
+// 解码
+export function base64ToStr(base64: string): string {
+  const BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".split('')
+  // 要填充的字符
+  const PADDING_CHAR = '='
+  const BITS_PER_BYTE = 8 // 一个字节占8个比特位
+  // 字母表中单个字符的编码位数 6  2**6 = 64
+  const BITS_PER_CHAR = Math.round(Math.log2(BASE64_ALPHABET.length))
+  // 最小公倍数,6 和8的最小公倍数 24（每个字节 8 位，每个字符 6 位）。
+  const BITS_PER_CHUNK = getLcm(BITS_PER_CHAR, BITS_PER_BYTE) // 6
+  const CHARS_PER_CHUNK = BITS_PER_CHUNK / BITS_PER_CHAR // 4
+  const CHUNK_LENGTH = BITS_PER_CHUNK / BITS_PER_BYTE  // 3
+  const ENCODING_MASK = BASE64_ALPHABET.length - 1  // 编码时的掩码
+  const DECODING_MASK = 0x3f // 解码时的掩码  63
+
+  let base32Str = ''
+  // 1. 删除填充字符'='
+  base64 = base64.replaceAll(PADDING_CHAR,'')
+
+  // 2. 将字符拆分为数组
+  const base64Array = base64.split('')
+
+  
+  // 3. 将每个字符转换为 digits 数组中的索引
+  const byteArray = base64Array.map(base => {
+    return BASE64_ALPHABET.findIndex(digit => digit === base)
+  })
+// 46 -> 38
+  // 4. 将数组划分为 8 个字节的块（40 位 = 8 * 5 编码位）。   共4*6=24比特
+  const byteArrayChunks = chunk(byteArray, CHARS_PER_CHUNK);
+  // 5. 计算给定块代表的原始字节数（当最后一个块少于 24 位时）。
+  byteArrayChunks.forEach(byteArrayChunk => {
+    // 6. 计算编码时应用的位填充。 2 * 6 / 8 = 1  6 - (1*8)%6 = 6 - 2 = 4
+    let number_of_original_bytes = Math.floor((byteArrayChunk.length * BITS_PER_CHAR / BITS_PER_BYTE)) // 3
+    let padding = byteArrayChunk.length < CHARS_PER_CHUNK ? BITS_PER_CHAR - (number_of_original_bytes * BITS_PER_BYTE) % BITS_PER_CHAR : 0
+    // 4 - 6
+    let buf = 0n
+    byteArrayChunk.forEach(byte => {
+      // 向左6位
+      buf = (buf << BigInt(BITS_PER_CHAR)) + BigInt(byte)
+    })
+    // 移除填充的比特位
+    buf >>= BigInt(padding)
+
+    // 7. 将字节组合成一个数字并去除填充。
+    const result = []
+    while(buf > 0) {// 一次移动八位, 使用
+      let a = Number(buf & BigInt(2**BITS_PER_BYTE - 1)) // 255
+      result.push(a)
+      // 向右8位
+      buf = buf >> BigInt(BITS_PER_BYTE)
+    }
+    let chunkRes = result.toReversed();
+
+    // 8. 通过一次提取 1 个字节（8 位）来解码该数字。
+    // byte转字符
+    let str = byteToStr(new Uint8Array(chunkRes))
+    base32Str += str
+  })
+
+  return base32Str
+}
+
+
+
+console.log(
+  'base64解码:',
+  base64ToStr('Zm9vYmFycg==')
 );
