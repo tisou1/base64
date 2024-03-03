@@ -7,8 +7,8 @@
   "scripts": {
     "test": "vitest run --update",
     "test:w": "vitest --watch --update ",
-    "dev": "bun index.ts",
-    "dev:w": "bun --watch index.ts"
+    "dev": "bun index.ts || tsx index.ts",
+    "dev:w": "bun --watch index.ts || tsx watch index"
   },
   "keywords": [],
   "author": "",
